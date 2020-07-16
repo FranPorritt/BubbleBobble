@@ -5,6 +5,7 @@
 #include "PaperSpriteComponent.h"
 #include "Sound/SoundBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "BubbleBobbleGameInstance.h"
 
 // Sets default values
 APickupItem::APickupItem()
@@ -26,6 +27,11 @@ void APickupItem::BeginPlay()
 {
 	Super::BeginPlay();
 
+	SetSprite();
+}
+
+void APickupItem::SetSprite()
+{
 	if (!BookcaseSprites.Num() || !itemSprites.Num())
 	{
 		return;
@@ -36,7 +42,7 @@ void APickupItem::BeginPlay()
 		int selectedSpriteIndex = rand() % numOfSprites - 1;
 		spriteComp->SetSprite(itemSprites[selectedSpriteIndex]);
 		scoringValue = 100;
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "item letter spawned");
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "item letter spawned");
 	}
 	else
 	{
@@ -44,35 +50,40 @@ void APickupItem::BeginPlay()
 		spriteComp->SetSprite(BookcaseSprites.FindRef(BookcaseLetter));
 		scoringValue = 1000;
 		canFall = false;
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "bookcase letter spawned");
-	}	
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "bookcase letter spawned");
+	}
 }
 
 void APickupItem::OnOverlapBegin(UPrimitiveComponent * OverlappedComp, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
 {
 	if (OtherActor->GetClass()->GetName().StartsWith("BP_2DSideScroller"))
 	{
-		//UGameplayStatics::GetGameInstance();
-		//add score to the game instance
-		
-		UGameplayStatics::PlaySound2D(this, SFX);
-		if (BookcaseLetter == "")
+		if (!canFall)
 		{
-			Destroy();
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "normal item collected");
-		}
-		else
-		{
-			//add letter collected to the game instance
-			//check if all letters have been collected 
-			Destroy();
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "bookcase letter item collected");
-		}
+			UBubbleBobbleGameInstance* gameInstance = Cast<UBubbleBobbleGameInstance>(UGameplayStatics::GetGameInstance(this));
+			gameInstance->score += scoringValue;
+			UGameplayStatics::PlaySound2D(this, SFX);
+			if (BookcaseLetter == "")
+			{
+				Destroy();
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "normal item collected");
+			}
+			else
+			{
+				gameInstance->lettersCollected.Add(BookcaseLetter.ToString());
+				if (gameInstance->lettersCollected.Num() == 8)
+				{
+					UGameplayStatics::OpenLevel(this, "Level_Bookcase");
+				}
+				Destroy();
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "bookcase letter item collected");
+			}
+		}		
 	}
-	else if (OtherActor->GetClass()->GetName().Contains("Platform") || OtherActor->GetClass()->GetName().Contains("Wall"))
+	else if ((OtherActor->GetClass()->GetName().Contains("Platform") || OtherActor->GetClass()->GetName().Contains("Wall")) && BookcaseLetter == "")
 	{
 		canFall = false;
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "item landed on the platform");
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "item landed on the platform");
 	}
 }
 
@@ -93,6 +104,11 @@ void APickupItem::Tick(float DeltaTime)
 	}
 	else
 	{
+		if (doOnce)
+		{
+			SetSprite();
+			doOnce = false;
+		}
 		//make the letter float
 		FVector location = GetActorLocation();
 		location += FVector(0.0f, 0.0f, 1.5f);

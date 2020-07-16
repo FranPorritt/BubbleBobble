@@ -16,6 +16,8 @@
 
 #include "Bubble.h"
 #include "Enemy.h"
+#include "BubbleBobbleGameInstance.h"
+#include "BubbleBobbleGameMode.h"
 
 DEFINE_LOG_CATEGORY_STATIC(SideScrollerCharacter, Log, All);
 
@@ -32,6 +34,7 @@ ABubbleBobbleCharacter::ABubbleBobbleCharacter()
 	// Set the size of our collision capsule.
 	GetCapsuleComponent()->SetCapsuleHalfHeight(96.0f);
 	GetCapsuleComponent()->SetCapsuleRadius(40.0f);
+	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ABubbleBobbleCharacter::OnOverlapBegin);
 
 	GetCharacterMovement()->bOrientRotationToMovement = false;
 
@@ -103,16 +106,29 @@ void ABubbleBobbleCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	
-	UpdateCharacter();	
-	//get the game mode and do the timer
+	UpdateCharacter();		
 }
 
 void ABubbleBobbleCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ABubbleBobbleCharacter::OnOverlapBegin);
 
 	spawnPos = this->GetActorLocation();
+
+	FString levelName = UGameplayStatics::GetCurrentLevelName(this);
+	UBubbleBobbleGameInstance* gameInstance = Cast<UBubbleBobbleGameInstance>(UGameplayStatics::GetGameInstance(this));
+	if (levelName == "Level_1")
+	{
+		gameInstance->score = 0;
+		gameInstance->lives = 3;
+		gameInstance->lettersCollected.Empty();
+	}
+	else if (levelName == "Level_Bookcase")
+	{
+		gameInstance->lives = 3;
+	}
+	lives = gameInstance->lives;
+	gameInstance->SetBackgroundMusic();
 }
 
 

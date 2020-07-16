@@ -94,7 +94,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sounds)
 	class USoundBase* RespawnSound;
 
-
 	/** Called to choose the correct animation to play based on the character's movement state */
 	void UpdateAnimation();
 
@@ -120,10 +119,12 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "My Functions")
 	void Fire();
 
-	void Respawn();
 
 public:
 	ABubbleBobbleCharacter();
+
+	UFUNCTION(BlueprintCallable)
+	void Respawn();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Projectile, meta = (AllowPrivateAccess = "true"))
 	EPlayerPower currentPower = EPlayerPower::eStandard;

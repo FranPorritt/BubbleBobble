@@ -16,6 +16,7 @@ UCLASS(minimalapi)
 class ABubbleBobbleGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
+
 public:
 	ABubbleBobbleGameMode();
 
@@ -24,4 +25,13 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	int Timer{ 120 };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sounds)
+	class USoundBase* HurryUpSound;
+
+private:
+	FTimerHandle loopTimeHandle;
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
+	void UpdateTimer();
 };
