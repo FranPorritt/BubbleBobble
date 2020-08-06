@@ -12,6 +12,9 @@
  *
  * This game mode just sets the default pawn to be the MyCharacter asset, which is a subclass of BubbleBobbleCharacter
  */
+
+enum class EPowerUpType : uint8;
+
 UCLASS(minimalapi)
 class ABubbleBobbleGameMode : public AGameModeBase
 {
@@ -20,8 +23,14 @@ class ABubbleBobbleGameMode : public AGameModeBase
 public:
 	ABubbleBobbleGameMode();
 
+	void ActivatePowerUp(EPowerUpType powerUp) noexcept;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	bool FearActivated{ false };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+	bool SlowDownActivated{ false };
+	void DeactivateSlowDown() noexcept { SlowDownActivated = false; }
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	int Timer{ 120 };
@@ -31,7 +40,7 @@ public:
 
 private:
 	FTimerHandle loopTimeHandle;
+	FTimerHandle timerHandler;
 	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaSeconds) override;
 	void UpdateTimer();
 };

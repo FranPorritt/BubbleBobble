@@ -16,6 +16,7 @@
 
 #include "Bubble.h"
 #include "Enemy.h"
+#include "PickupItem.h"
 #include "BubbleBobbleGameInstance.h"
 #include "BubbleBobbleGameMode.h"
 
@@ -142,8 +143,8 @@ void ABubbleBobbleCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ABubbleBobbleCharacter::MoveRight);
 
-	//PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ABubbleBobbleCharacter::Fire);
-	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ABubbleBobbleCharacter::StopAnimation);
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ABubbleBobbleCharacter::Fire);
+	//PlayerInputComponent->BindAction("Fire", IE_Released, this, &ABubbleBobbleCharacter::StopAnimation);
 
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &ABubbleBobbleCharacter::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &ABubbleBobbleCharacter::TouchStopped);
@@ -223,55 +224,43 @@ void ABubbleBobbleCharacter::OnOverlapBegin(UPrimitiveComponent * OverlappedComp
 	}	
 	if (isImmune)
 	{
-		UWorld* const World = GetWorld();
-		if (World != NULL)
-		{
-			World->GetTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::SetImmunity, 2.f, false);
-		}
+		GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::DeactivateImmunity, 2.f, false);		
 	}
 }
 
 void ABubbleBobbleCharacter::Fire() //Shooting
 {
-	DesiredAnimation = EAnimationStates::eFiring;
-	UGameplayStatics::PlaySound2D(this, FireSound);
-	UWorld* const World = GetWorld();
-	if (World != NULL)
+	if (canShoot)
 	{
-		FVector spawnLocation = this->RootComponent->GetComponentLocation();
+		DesiredAnimation = EAnimationStates::eFiring;
+		UGameplayStatics::PlaySound2D(this, FireSound);
+		UWorld* const World = GetWorld();
+		if (World != NULL)
+		{
+			FVector spawnLocation = this->RootComponent->GetComponentLocation();
 
-		ABubble* Bubble = World->SpawnActor<ABubble>(BubbleClass, spawnLocation, FRotator::ZeroRotator);
-		if (currentPower == EPlayerPower::eStandard)
-		{
-			Bubble->currentBubble = EBubbleType::eStandardBubble;
+			ABubble* Bubble = World->SpawnActor<ABubble>(BubbleBPClass, spawnLocation, FRotator::ZeroRotator);
+			if (currentPower == EPlayerPower::eStandard)
+			{
+				Bubble->currentBubble = EBubbleType::eStandardBubble;
+			}
+			if (currentPower == EPlayerPower::eBubblegum)
+			{
+				Bubble->currentBubble = EBubbleType::eGumBubble;
+			}
+			if (Bubble)
+			{
+				Bubble->FireInDirection(GetActorForwardVector());
+			}
 		}
-		if (currentPower == EPlayerPower::eBubblegum)
-		{
-			Bubble->currentBubble = EBubbleType::eGumBubble;
-		}
-		if (Bubble)
-		{
-			Bubble->FireInDirection(GetActorForwardVector());
-		}
-	}
-}
-
-void ABubbleBobbleCharacter::StopAnimation()
-{
-	UWorld* const World = GetWorld();
-	if (World != NULL)
-	{
-		World->GetTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::onTimerEnd, 0.6f, false);
-	}
+		canShoot = false;
+		GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::CanShootAgain, shootingCooldown, false);
+	}	
 }
 
 void ABubbleBobbleCharacter::StopAnimation(float argWaitingTime)
 {
-	UWorld* const World = GetWorld();
-	if (World != NULL)
-	{
-		World->GetTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::onTimerEnd, argWaitingTime, false);
-	}
+	GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::onTimerEnd, argWaitingTime, false);	
 }
 
 void ABubbleBobbleCharacter::Jump()
@@ -296,15 +285,30 @@ void ABubbleBobbleCharacter::Respawn()
 	this->SetActorLocation(spawnPos, false);
 	SetImmunity(true);
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "Immunity set to true");
-	UWorld* const World = GetWorld();
-	if (World != NULL)
-	{
-		World->GetTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::SetImmunity, 2.f, false);
-	}
+	
+	GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::DeactivateImmunity, 2.f, false);
+	
 	// INVINCIBLE FOR X TIME
 }
 
 void ABubbleBobbleCharacter::onTimerEnd()
 {
 	DesiredAnimation = EAnimationStates::eIdle;
+}
+
+void ABubbleBobbleCharacter::ActivatePowerUp(EPowerUpType powerUp) noexcept
+{
+	switch (powerUp)
+	{
+	case EPowerUpType::eInvicibility:
+		isImmune = true;
+		GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::DeactivateImmunity, 5.f, false);
+		break;
+	case EPowerUpType::eBubbleGum:
+		currentPower = EPlayerPower::eBubblegum;
+		GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::DeactivateBubbleGum, 5.f, false);
+		break;
+	default:
+		break;
+	}
 }

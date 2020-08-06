@@ -3,6 +3,7 @@
 #include "BubbleBobbleGameMode.h"
 #include "BubbleBobbleCharacter.h"
 #include "BubbleBobbleGameInstance.h"
+#include "PickupItem.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
@@ -13,18 +14,26 @@ ABubbleBobbleGameMode::ABubbleBobbleGameMode()
 	DefaultPawnClass = ABubbleBobbleCharacter::StaticClass();	
 }
 
-void ABubbleBobbleGameMode::BeginPlay()
+void ABubbleBobbleGameMode::ActivatePowerUp(EPowerUpType powerUp) noexcept
 {
-	UWorld* const World = GetWorld();
-	if (World != NULL)
+	switch (powerUp)
 	{
-		World->GetTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleGameMode::UpdateTimer, 1.f, true);
+	case EPowerUpType::eFear:
+		FearActivated = true;
+		break;
+	case EPowerUpType::eClock:
+		SlowDownActivated = true;
+		GetWorldTimerManager().SetTimer(timerHandler, this, &ABubbleBobbleGameMode::DeactivateSlowDown, 5.0f, false);
+		break;
+	case EPowerUpType::eNone:
+	default:
+		break;
 	}
 }
 
-void ABubbleBobbleGameMode::Tick(float DeltaSeconds)
+void ABubbleBobbleGameMode::BeginPlay()
 {
-	
+	GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleGameMode::UpdateTimer, 1.f, true);	
 }
 
 void ABubbleBobbleGameMode::UpdateTimer()

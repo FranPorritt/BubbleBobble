@@ -6,8 +6,6 @@
 #include "PaperCharacter.h"
 #include "BubbleBobbleCharacter.generated.h"
 
-class UTextRenderComponent;
-
 /**
  * This class is the default character for BubbleBobble, and it is responsible for all
  * physical interaction between the player and the world.
@@ -16,6 +14,8 @@ class UTextRenderComponent;
  * The CharacterMovementComponent (inherited from ACharacter) handles movement of the collision capsule
  * The Sprite component (inherited from APaperCharacter) handles the visuals
  */
+
+enum class EPowerUpType : uint8;
 
 UENUM(BlueprintType)
 enum class EAnimationStates : uint8
@@ -42,26 +42,31 @@ class ABubbleBobbleCharacter : public APaperCharacter
 	EAnimationStates AnimationState = EAnimationStates::eIdle;
 	EAnimationStates DesiredAnimation;
 
+	/* Cooldowns */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Gameplay, meta = (AllowPrivateAccess = "true"))
+	float shootingCooldown{ 0.5f };
+	bool canShoot{ true };
+	void CanShootAgain() noexcept { canShoot = true; DesiredAnimation = EAnimationStates::eIdle; }
+
 	FTimerHandle loopTimeHandle;
 
-	UTextRenderComponent* TextComponent;
+	//UTextRenderComponent* TextComponent;
 	virtual void Tick(float DeltaSeconds) override;
 
 	virtual void BeginPlay() override;
 
-	void StopAnimation();
 	void StopAnimation(float argWaitingTime);
 	virtual void Jump() override;
 	virtual void StopJumping() override;
 
 	void SetImmunity(bool state) { isImmune = state; }
-	void SetImmunity() { isImmune = false; }
+	void DeactivateImmunity() { isImmune = false; }
+	void DeactivateBubbleGum() { currentPower = EPlayerPower::eStandard; }
 
 protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
-	FVector spawnPos;
-	
+	FVector spawnPos;	
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	bool isImmune = false;
@@ -132,11 +137,12 @@ public:
 	UFUNCTION()
 	void onTimerEnd();
 
+	void ActivatePowerUp(EPowerUpType powerUp) noexcept;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	int lives = 3;
 
 	// Projectile class to spawn
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Projectile)
-	TSubclassOf<class ABubble> BubbleClass;
-
+	TSubclassOf<class ABubble> BubbleBPClass;
 };

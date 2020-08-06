@@ -5,7 +5,10 @@
 #include "PaperSpriteComponent.h"
 #include "Sound/SoundBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "TimerManager.h"
 #include "BubbleBobbleGameInstance.h"
+#include "BubbleBobbleGameMode.h"
+#include "BubbleBobbleCharacter.h"
 
 // Sets default values
 APickupItem::APickupItem()
@@ -36,21 +39,65 @@ void APickupItem::SetSprite()
 	{
 		return;
 	}
-	if (BookcaseLetter == "")
+	if (BookcaseLetter == "" && PowerUpType == EPowerUpType::eNone)
 	{
-		int numOfSprites = itemSprites.Num();
-		int selectedSpriteIndex = rand() % numOfSprites - 1;
-		spriteComp->SetSprite(itemSprites[selectedSpriteIndex]);
-		scoringValue = 100;
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "item letter spawned");
+		if (rand() % 10 != 0)
+		{
+			//NORMAL ITEM
+			int numOfSprites = itemSprites.Num();
+			int selectedSpriteIndex = rand() % numOfSprites - 1;
+			spriteComp->SetSprite(itemSprites[selectedSpriteIndex]);
+			scoringValue = 100;
+			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "item letter spawned");
+		}
+		else
+		{
+			//POWER UP
+			int numOfSprites = powerUpSprites.Num();
+			int selectedSpriteIndex = rand() % numOfSprites - 2;
+			switch (selectedSpriteIndex)
+			{
+			case 0:
+				//INVINCIBILITY
+				spriteComp->SetSprite(powerUpSprites.FindRef(EPowerUpType::eInvicibility));
+				PowerUpType = EPowerUpType::eInvicibility;
+				break;
+			case 1:
+				//BUBBLEGUM
+				spriteComp->SetSprite(powerUpSprites.FindRef(EPowerUpType::eBubbleGum));
+				PowerUpType = EPowerUpType::eBubbleGum;
+				break;
+			case 2:
+				//FEAR
+				spriteComp->SetSprite(powerUpSprites.FindRef(EPowerUpType::eFear));
+				PowerUpType = EPowerUpType::eFear;
+				break;
+			case 3:
+				//CLOCK
+				spriteComp->SetSprite(powerUpSprites.FindRef(EPowerUpType::eClock));
+				PowerUpType = EPowerUpType::eClock;
+				break;
+			default:
+				break;
+			}
+			scoringValue = 500;
+		}
 	}
-	else
+	if(BookcaseLetter != "")
 	{
+		//BOOKCASE LETTER
 		spriteComp->SetRelativeScale3D(FVector(0.5f));
 		spriteComp->SetSprite(BookcaseSprites.FindRef(BookcaseLetter));
 		scoringValue = 1000;
 		canFall = false;
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "bookcase letter spawned");
+	}
+	if (PowerUpType != EPowerUpType::eNone)
+	{
+		//POWER UP
+		spriteComp->SetRelativeScale3D(FVector(0.5f));
+		spriteComp->SetSprite(powerUpSprites.FindRef(PowerUpType));
+		scoringValue = 500;
 	}
 }
 
@@ -62,22 +109,34 @@ void APickupItem::OnOverlapBegin(UPrimitiveComponent * OverlappedComp, AActor * 
 		{
 			UBubbleBobbleGameInstance* gameInstance = Cast<UBubbleBobbleGameInstance>(UGameplayStatics::GetGameInstance(this));
 			gameInstance->score += scoringValue;
-			UGameplayStatics::PlaySound2D(this, SFX);
-			if (BookcaseLetter == "")
+			if (PowerUpType == EPowerUpType::eNone)
 			{
-				Destroy();
-				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "normal item collected");
-			}
+				UGameplayStatics::PlaySound2D(this, SFXs.FindRef("ItemSFX"));
+			}	
 			else
+			{
+				UGameplayStatics::PlaySound2D(this, SFXs.FindRef("PowerUpSFX"));
+				if (PowerUpType == EPowerUpType::eInvicibility || PowerUpType == EPowerUpType::eBubbleGum)
+				{
+					ABubbleBobbleCharacter* player = Cast<ABubbleBobbleCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+					player->ActivatePowerUp(PowerUpType);
+				}
+				else if (PowerUpType == EPowerUpType::eFear || PowerUpType == EPowerUpType::eClock)
+				{
+					ABubbleBobbleGameMode* gameMode = Cast<ABubbleBobbleGameMode>(UGameplayStatics::GetGameMode(this));
+					gameMode->ActivatePowerUp(PowerUpType);
+				}
+			}			
+			if(BookcaseLetter != "")
 			{
 				gameInstance->lettersCollected.Add(BookcaseLetter.ToString());
 				if (gameInstance->lettersCollected.Num() == 8)
 				{
 					UGameplayStatics::OpenLevel(this, "Level_Bookcase");
-				}
-				Destroy();
+				}				
 				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "bookcase letter item collected");
 			}
+			Destroy();
 		}		
 	}
 	else if ((OtherActor->GetClass()->GetName().Contains("Platform") || OtherActor->GetClass()->GetName().Contains("Wall")) && BookcaseLetter == "")
@@ -100,6 +159,11 @@ void APickupItem::Tick(float DeltaTime)
 			FVector location = GetActorLocation();
 			location -= FVector(0.0f, 0.0f, 4.0f);
 			SetActorLocation(location);
+		}
+		if (PowerUpType == EPowerUpType::eFear)
+		{
+			ABubbleBobbleCharacter* temp = Cast<ABubbleBobbleCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+			UKismetSystemLibrary::MoveComponentTo(RootComponent, temp->GetActorLocation(), FRotator(0.0f, 0.0f, 0.0f), false, true, 0.4f, false, EMoveComponentAction::Move, FLatentActionInfo());
 		}
 	}
 	else
