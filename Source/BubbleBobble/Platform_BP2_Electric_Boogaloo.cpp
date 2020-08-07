@@ -1,21 +1,22 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Platform_BP2_Electric_Boogaloo.h"
-#include "Components/CapsuleComponent.h"
+#include "Components/BoxComponent.h"
+#include "PaperSpriteComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "TimerManager.h"
+#include "BubbleBobbleCharacter.h"
 
 // Sets default values
 APlatform_BP2_Electric_Boogaloo::APlatform_BP2_Electric_Boogaloo()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-
-	if (!RootComponent)
-	{
-		RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("PlatformBase"));
-	}	
+	PrimaryActorTick.bCanEverTick = true;	
 
 	sprite = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Paper Sprite"));
-	sprite->SetupAttachment(RootComponent);
+	sprite->SetRelativeScale3D(FVector(1.0f, 4.0f, 1.0f));
+	sprite->SetMobility(EComponentMobility::Static);
+	RootComponent = sprite;
 
 	colBox = CreateDefaultSubobject<UBoxComponent>(TEXT("Box"));
 	colBox->SetRelativeLocation(FVector(0, 0, 280));
@@ -31,43 +32,7 @@ void APlatform_BP2_Electric_Boogaloo::BeginPlay()
 {
 	Super::BeginPlay();
 
-	switch (isprite)
-	{
-	case 0:
-		sprite->SetSprite(sprite1);
-		break;
-	case 1:
-		sprite->SetSprite(sprite2);
-		break;
-	case 2:
-		sprite->SetSprite(sprite3);
-		break;
-	case 3:
-		sprite->SetSprite(sprite4);
-		break;
-	case 4:
-		sprite->SetSprite(sprite5);
-		break;
-	case 5:
-		sprite->SetSprite(sprite6);
-		break;
-	case 6:
-		sprite->SetSprite(sprite7);
-		break;
-	case 7:
-		sprite->SetSprite(sprite8);
-		break;
-	case 8:
-		sprite->SetSprite(sprite9);
-		break;
-	case 9:
-		sprite->SetSprite(sprite10);
-		break;
-	}
-
-	sprite->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
-	sprite->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
-	sprite->SetCollisionResponseToChannel(ECC_Vehicle, ECR_Block);
+	SetSprite();
 }
 
 void APlatform_BP2_Electric_Boogaloo::Activate_Floor_Player()
@@ -82,38 +47,30 @@ void APlatform_BP2_Electric_Boogaloo::Activate_Floor_Enemy()
 
 void APlatform_BP2_Electric_Boogaloo::OnOverlapBegin(UPrimitiveComponent * OverlappedComp, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
 {
-	if (OtherActor->ActorHasTag("Player"))
+	if (OtherActor->GetClass()->GetName().Contains("BP_2DSideScroller"))
 	{
-		if (colBox->GetComponentLocation().Z < OtherActor->GetRootComponent()->GetComponentLocation().Z) // Coming from above
+		if (colBox->GetComponentLocation().Z < OtherActor->GetActorLocation().Z) // Coming from above
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Player has collided with the platform FROM ABOVE");
 			sprite->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 		}
 		else
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Player has collided with the platform FROM BELLOW");
-			UWorld* const World = GetWorld();
-			if (World != NULL)
-			{
-				World->GetTimerManager().SetTimer(loopTimeHandle, this, &APlatform_BP2_Electric_Boogaloo::Activate_Floor_Player, 0.3f, false);
-			}			
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Player has collided with the platform FROM BELLOW");			
+			GetWorldTimerManager().SetTimer(loopTimeHandle, this, &APlatform_BP2_Electric_Boogaloo::Activate_Floor_Player, 0.2f, false);					
 		}
 	}
 	else
 	{
-		if (OtherActor->ActorHasTag("Enemy"))
+		if (OtherActor->GetClass()->GetName().Contains("Enemy"))
 		{
-			if (colBox->GetComponentLocation().Z < OtherActor->GetRootComponent()->GetComponentLocation().Z)
+			if (colBox->GetComponentLocation().Z < OtherActor->GetActorLocation().Z)
 			{
 				sprite->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Block);
 			}
 			else
 			{
-				UWorld* const World = GetWorld();
-				if (World != NULL)
-				{
-					World->GetTimerManager().SetTimer(loopTimeHandle, this, &APlatform_BP2_Electric_Boogaloo::Activate_Floor_Enemy, 0.3f, false);
-				}				
+				GetWorldTimerManager().SetTimer(loopTimeHandle, this, &APlatform_BP2_Electric_Boogaloo::Activate_Floor_Enemy, 0.2f, false);				
 			}
 		}
 	}
@@ -121,11 +78,11 @@ void APlatform_BP2_Electric_Boogaloo::OnOverlapBegin(UPrimitiveComponent * Overl
 
 void APlatform_BP2_Electric_Boogaloo::OnOverlapEnd(UPrimitiveComponent * OverlappedComp, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex)
 {
-	if (OtherActor->ActorHasTag("Player"))
+	if (OtherActor->GetClass()->GetName().Contains("BP_2DSideScroller"))
 	{
 		sprite->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 	}
-	else if (OtherActor->ActorHasTag("Enemy"))
+	else if (OtherActor->GetClass()->GetName().Contains("Enemy"))
 	{
 		sprite->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
 	}
@@ -135,19 +92,23 @@ void APlatform_BP2_Electric_Boogaloo::OnOverlapEnd(UPrimitiveComponent * Overlap
 void APlatform_BP2_Electric_Boogaloo::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	//UWorld* const World = GetWorld();
-	//if (World != NULL)
-	//{
-	//	//if platform is higher than the player then the platform will ignore so that the player can go through
-	//	if (colBox->GetComponentLocation().Z > UGameplayStatics::GetPlayerCharacter(World, 0)->GetCapsuleComponent()->GetComponentLocation().Z)
-	//	{
-	//		if (sprite->GetCollisionResponseToChannel(ECC_Pawn) != ECR_Ignore)
-	//		{
-	//			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Platform higher than the player");
-	//			sprite->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
-	//		}
-	//		//THE PROBLEM IS HERE!!
-	//	}
-	//}	
+	
+	//if platform is higher than the player then the platform will ignore so that the player can go through
+	ABubbleBobbleCharacter* tempPlayer = Cast<ABubbleBobbleCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+	if (colBox->GetComponentLocation().Z > (tempPlayer->GetActorLocation().Z + 100.0f))
+	{
+		if (sprite->GetCollisionResponseToChannel(ECC_Pawn) != ECR_Ignore)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Platform higher than the player");
+			sprite->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+		}
+	}
 }
 
+void APlatform_BP2_Electric_Boogaloo::SetSprite()
+{
+	sprite->SetSprite(tileSprites.FindRef(desiredSprite));
+	sprite->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+	sprite->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
+	sprite->SetCollisionResponseToChannel(ECC_Vehicle, ECR_Block);
+}
