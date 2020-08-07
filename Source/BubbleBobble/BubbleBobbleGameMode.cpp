@@ -20,6 +20,7 @@ void ABubbleBobbleGameMode::ActivatePowerUp(EPowerUpType powerUp) noexcept
 	{
 	case EPowerUpType::eFear:
 		FearActivated = true;
+		GetWorldTimerManager().SetTimer(timerHandler, this, &ABubbleBobbleGameMode::DeactivateFear, 5.0f, false);
 		break;
 	case EPowerUpType::eClock:
 		SlowDownActivated = true;

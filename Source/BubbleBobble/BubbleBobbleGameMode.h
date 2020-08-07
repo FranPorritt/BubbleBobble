@@ -27,6 +27,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	bool FearActivated{ false };
+	void DeactivateFear() noexcept { FearActivated = false; }
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	bool SlowDownActivated{ false };

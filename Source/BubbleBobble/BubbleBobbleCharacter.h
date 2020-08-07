@@ -48,7 +48,9 @@ class ABubbleBobbleCharacter : public APaperCharacter
 	bool canShoot{ true };
 	void CanShootAgain() noexcept { canShoot = true; DesiredAnimation = EAnimationStates::eIdle; }
 
-	FTimerHandle loopTimeHandle;
+	FTimerHandle animationsTimeHandler;
+	FTimerHandle powerUpTimeHandler;
+	FTimerHandle fireTimeHandler;
 
 	//UTextRenderComponent* TextComponent;
 	virtual void Tick(float DeltaSeconds) override;

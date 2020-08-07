@@ -224,7 +224,7 @@ void ABubbleBobbleCharacter::OnOverlapBegin(UPrimitiveComponent * OverlappedComp
 	}	
 	if (isImmune)
 	{
-		GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::DeactivateImmunity, 2.f, false);		
+		GetWorldTimerManager().SetTimer(powerUpTimeHandler, this, &ABubbleBobbleCharacter::DeactivateImmunity, 2.f, false);		
 	}
 }
 
@@ -254,13 +254,13 @@ void ABubbleBobbleCharacter::Fire() //Shooting
 			}
 		}
 		canShoot = false;
-		GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::CanShootAgain, shootingCooldown, false);
+		GetWorldTimerManager().SetTimer(fireTimeHandler, this, &ABubbleBobbleCharacter::CanShootAgain, shootingCooldown, false);
 	}	
 }
 
 void ABubbleBobbleCharacter::StopAnimation(float argWaitingTime)
 {
-	GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::onTimerEnd, argWaitingTime, false);	
+	GetWorldTimerManager().SetTimer(animationsTimeHandler, this, &ABubbleBobbleCharacter::onTimerEnd, argWaitingTime, false);	
 }
 
 void ABubbleBobbleCharacter::Jump()
@@ -286,7 +286,7 @@ void ABubbleBobbleCharacter::Respawn()
 	SetImmunity(true);
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, "Immunity set to true");
 	
-	GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::DeactivateImmunity, 2.f, false);
+	GetWorldTimerManager().SetTimer(powerUpTimeHandler, this, &ABubbleBobbleCharacter::DeactivateImmunity, 2.f, false);
 	
 	// INVINCIBLE FOR X TIME
 }
@@ -302,11 +302,11 @@ void ABubbleBobbleCharacter::ActivatePowerUp(EPowerUpType powerUp) noexcept
 	{
 	case EPowerUpType::eInvicibility:
 		isImmune = true;
-		GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::DeactivateImmunity, 5.f, false);
+		GetWorldTimerManager().SetTimer(powerUpTimeHandler, this, &ABubbleBobbleCharacter::DeactivateImmunity, 5.f, false);
 		break;
 	case EPowerUpType::eBubbleGum:
 		currentPower = EPlayerPower::eBubblegum;
-		GetWorldTimerManager().SetTimer(loopTimeHandle, this, &ABubbleBobbleCharacter::DeactivateBubbleGum, 5.f, false);
+		GetWorldTimerManager().SetTimer(powerUpTimeHandler, this, &ABubbleBobbleCharacter::DeactivateBubbleGum, 5.f, false);
 		break;
 	default:
 		break;
